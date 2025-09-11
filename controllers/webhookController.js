@@ -149,30 +149,8 @@ const handleProductWebhook = async (req, res) => {
   }
 };
 
-const handleCheckoutCreate = async (req, res) => {
-  const shopDomain = req.get("X-Shopify-Shop-Domain");
-  const tenant = await prisma.tenant.findUnique({ where: { shopDomain } });
-  if (!tenant) return res.status(404).end();
-
-  const checkout = req.body;
-
-  await prisma.checkout.upsert({
-    where: { id: checkout.id.toString() },
-    update: { totalPrice: parseFloat(checkout.total_price) || 0 },
-    create: {
-      id: checkout.id.toString(),
-      tenantId: tenant.id,
-      email: checkout.email,
-      totalPrice: parseFloat(checkout.total_price) || 0,
-    },
-  });
-
-  res.status(200).send("Checkout saved");
-};
-
 module.exports = {
   handleOrderWebhook,
   handleCustomerWebhook,
-  handleProductWebhook,
-  handleCheckoutCreate
+  handleProductWebhook
 };

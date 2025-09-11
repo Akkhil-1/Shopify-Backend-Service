@@ -1,6 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const redis = require('../utils/redisClient')
+const redis = require("../utils/redisClient");
 
 const getOverview = async (req, res) => {
   try {
@@ -10,40 +10,43 @@ const getOverview = async (req, res) => {
     if (!tenant) return res.status(404).json({ msg: "No tenant found" });
 
     const cacheKey = `tenant:${tenant.id}:overview`;
-    const cached = await redis.get(cacheKey)
+    const cached = await redis.get(cacheKey);
 
     if (cached) {
-      return res.json({ msg: "Overview (cached)", ...cached });
+      try {
+        return res.json(JSON.parse(cached));
+      } catch (e) {
+        console.warn("Corrupt cache, clearing...");
+        await redis.del(cacheKey);
+      }
     }
 
     const totalCustomers = await prisma.customer.count({
       where: { tenantId: tenant.id },
     });
-
     const totalOrders = await prisma.order.count({
       where: { tenantId: tenant.id },
     });
-
     const totalRevenue = await prisma.order.aggregate({
       _sum: { totalPrice: true },
       where: { tenantId: tenant.id },
     });
 
     const data = {
-      totalCustomers,
-      totalOrders,
-      totalRevenue: totalRevenue._sum.totalPrice || 0,
+      customers: totalCustomers,
+      orders: totalOrders,
+      revenue: totalRevenue._sum.totalPrice || 0,
     };
 
     await redis.set(cacheKey, JSON.stringify(data), { ex: 300 });
 
-    return res.json({ msg: "Dats is : ", ...data });
-
+    return res.json(data);
   } catch (err) {
-    console.error("Error in getOverview:", err.message);
+    console.error("Error in getOverview:", err);
     return res.status(500).json({ msg: "Failed to fetch overview" });
   }
 };
+
 const getTopCustomers = async (req, res) => {
   try {
     const adminId = req.userId;
@@ -54,8 +57,12 @@ const getTopCustomers = async (req, res) => {
     const cached = await redis.get(cacheKey);
 
     if (cached) {
-      console.log("Cache HIT: top customers");
-      return res.json({ msg: "Top customers by spend (cached)", data: cached });
+      try {
+        return res.json(JSON.parse(cached));
+      } catch (e) {
+        console.warn("Corrupt cache, clearing...");
+        await redis.del(cacheKey);
+      }
     }
 
     const limit = parseInt(req.query.limit) || 5;
@@ -74,57 +81,112 @@ const getTopCustomers = async (req, res) => {
         const customer = await prisma.customer.findUnique({
           where: { id_tenantId: { id: c.customerId, tenantId: tenant.id } },
         });
+
         return {
-          id: customer?.id || c.customerId,
-          email: customer?.email || null,
-          firstName: customer?.firstName || null,
-          lastName: customer?.lastName || null,
-          totalSpent: c._sum.totalPrice || 0,
-          ordersCount: c._count.id,
+          name:
+            `${customer?.firstName || ""} ${customer?.lastName || ""}`.trim() ||
+            customer?.email ||
+            "Unknown",
+          spent: c._sum.totalPrice || 0,
         };
       })
     );
 
     await redis.set(cacheKey, JSON.stringify(customers), { ex: 300 });
 
-    return res.json({ msg: "Top customers by spend (fresh)", data: customers });
+    return res.json(customers);
   } catch (err) {
     console.error("Error in getTopCustomers:", err.message);
     return res.status(500).json({ msg: "Failed to fetch top customers" });
   }
 };
-
-const getOrdersByDate = async (req, res) => {
+const getRecentOrders = async (req, res) => {
   try {
     const adminId = req.userId;
     const tenant = await prisma.tenant.findFirst({ where: { adminId } });
     if (!tenant) return res.status(404).json({ msg: "No tenant found" });
+    if (cached) {
+      try {
+        return res.json(JSON.parse(cached));
+      } catch (e) {
+        console.warn("Corrupt cache, clearing...");
+        await redis.del(cacheKey);
+      }
+    }
 
-    const { from, to } = req.query;
-
-    const orders = await prisma.order.groupBy({
-      by: ["createdAt"],
-      _sum: { totalPrice: true },
-      where: {
-        tenantId: tenant.id,
-        createdAt: {
-          gte: from ? new Date(from) : undefined,
-          lte: to ? new Date(to) : undefined,
+    const orders = await prisma.order.findMany({
+      where: { tenantId: tenant.id },
+      select: {
+        id: true,
+        totalPrice: true,
+        financialStatus: true,
+        createdAt: true,
+        customer: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
+      take: 5,
     });
 
-    return res.json({
-      msg: "Orders grouped by date",
-    });
+    await redis.set(cacheKey, JSON.stringify(orders), { ex: 300 });
+
+    res.json(
+      orders.map((o) => ({
+        customer:
+          `${o.customer?.firstName || ""} ${o.customer?.lastName || ""}`.trim() ||
+          o.customer?.email ||
+          "Unknown",
+        amount: o.totalPrice,
+        status: o.financialStatus || "N/A",
+        date: o.createdAt,
+      }))
+    );
   } catch (err) {
-    console.error("Error in getOrdersByDate:", err.message);
-    return res.status(500).json({ msg: "Failed to fetch orders by date" });
+    console.error("Error in getRecentOrders:", err);
+    return res.status(500).json({ msg: "Failed to fetch recent orders" });
   }
 };
-module.exports = { 
-    getOverview,
-    getTopCustomers,
-    getOrdersByDate
+
+const financialStatus = async(req,res)=>{
+  try {
+    const adminId = req.userId;
+    const tenant = await prisma.tenant.findFirst({ where: { adminId } });
+    if (!tenant) return res.status(404).json({ msg: "No tenant found" });
+    if (cached) {
+      try {
+        return res.json(JSON.parse(cached));
+      } catch (e) {
+        console.warn("Corrupt cache, clearing...");
+        await redis.del(cacheKey);
+      }
+    }
+    const statusCounts = await prisma.order.groupBy({
+      by: ["financialStatus"],
+      where: { tenantId: tenant.id },
+      _count: { financialStatus: true },
+    });
+    const result = statusCounts.map((s) => ({
+      status: s.financialStatus || "UNKNOWN",
+      count: s._count.financialStatus,
+    }));
+
+    await redis.set(cacheKey, JSON.stringify(result), { ex: 300 });
+
+    res.json(result);
+
+  } catch (error) {
+    console.error("Error in getting financialStatus:", err);
+    return res.status(500).json({ msg: "Failed to fetch financialStatus" });
+  }
+}
+module.exports = {
+  getOverview,
+  getTopCustomers,
+  getRecentOrders,
+  financialStatus
 };

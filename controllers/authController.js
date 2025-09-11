@@ -54,14 +54,14 @@ const login = async (req, res) => {
 
     res.cookie("auth_token", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "strict",
+      secure: false,
+      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000,
     });
 
     return res.json({
       msg: "Login successful",
-      token : token,
+      // token : token,
       user: {
         id: admin.id,
         name: admin.name,

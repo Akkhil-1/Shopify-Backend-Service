@@ -4,7 +4,8 @@ const metricsController = require('../controllers/metricsController');
 const authMiddleware = require('../middlewares/authMiddleware')
 
 router.get('/getOverview' , authMiddleware , metricsController.getOverview)
-router.get('/getOrdersByDate' , authMiddleware , metricsController.getOrdersByDate)
+router.get('/getRecentOrders' , authMiddleware , metricsController.getRecentOrders)
 router.get('/getTopCustomers' , authMiddleware , metricsController.getTopCustomers)
+router.get('/getFinancialStaus' , authMiddleware , metricsController.financialStatus)
 
 module.exports = router

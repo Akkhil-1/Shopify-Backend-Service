@@ -11,7 +11,4 @@ router.post("/customers/updated", webhookController.handleCustomerWebhook);
 router.post("/products/create", webhookController.handleProductWebhook);
 router.post("/products/updated", webhookController.handleProductWebhook);
 
-router.post("/checkouts/create", webhookController.handleCheckoutCreate);
-router.post("/checkouts/update", webhookController.handleCheckoutCreate);
-
 module.exports = router;
