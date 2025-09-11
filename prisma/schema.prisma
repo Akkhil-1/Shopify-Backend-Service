@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenants   Tenant[]
+}
+
+model Tenant {
+  id          String     @id @default(cuid())
+  shopDomain  String     @unique
+  accessToken String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  adminId     String
+  name        String
+  customers   Customer[]
+  orders      Order[]
+  products    Product[]
+  admin       Admin      @relation(fields: [adminId], references: [id])
+  Checkout Checkout[]
+}
+
+model Customer {
+  id          String  @id
+  email       String?
+  firstName   String?
+  lastName    String?
+  tenantId    String
+  ordersCount Int?
+  totalSpent  String?
+  tenant      Tenant  @relation(fields: [tenantId], references: [id])
+
+  @@unique([id, tenantId])
+  Order Order[]
+}
+
+model Product {
+  id       String @id
+  title    String
+  price    Float?
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([id, tenantId])
+}
+
+model Order {
+  id         String   @id
+  totalPrice Float
+  financialStatus  String
+  createdAt  DateTime
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  customerId  String
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  @@unique([id, tenantId])
+}
+
+model Checkout {
+  id        String   @id
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  email     String?
+  totalPrice Float?
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
