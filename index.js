@@ -12,7 +12,7 @@ const metricsRouter = require('./routes/metricsRoutes')
 const webhookRouter = require('./routes/webHookRoutes')
 
 const corsOptions = {
-  origin: "https://tenant-analytics.vercel.app/",
+  origin: "https://tenant-analytics.vercel.app",
   credentials: true
 };
 app.use(cors(corsOptions));
