@@ -189,7 +189,7 @@ const financialStatus = async (req, res) => {
     return res.status(500).json({ msg: "Failed to fetch financialStatus" });
   }
 };
-const getDailyIncome = async (req, res) => {
+const getDailyIncome  = async (req, res) => {
   try {
     const adminId = req.userId;
     const tenant = await prisma.tenant.findFirst({ where: { adminId } });
@@ -197,60 +197,48 @@ const getDailyIncome = async (req, res) => {
       return res.status(404).json({ msg: "No tenant found" });
     }
 
-    const cacheKey = `tenant:${tenant.id}:dailyincome`;
+    const cacheKey = `tenant:${tenant.id}:monthlyincome`;
     const cached = await redis.get(cacheKey);
     if (cached) {
       try {
         return res.json(JSON.parse(cached));
       } catch (error) {
-        console.log("clearing cache");
         await redis.del(cacheKey);
       }
     }
 
     const today = new Date();
-    const fromDate = new Date();
-    fromDate.setDate(today.getDate() - 5);
-    const toDate = new Date();
-    toDate.setDate(today.getDate() + 10);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
     const orders = await prisma.order.findMany({
       where: {
         tenantId: tenant.id,
         createdAt: {
-          gte: fromDate,
-          lte: today,
+          gte: startOfMonth,
+          lte: endOfMonth,
         },
       },
       select: { totalPrice: true, createdAt: true },
-      orderBy: { createdAt: "asc" },
     });
 
-    const dailyIncome = [];
-    const totalDays = Math.ceil(
-      (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const incomeMap = {};
+    orders.forEach((o) => {
+      const day = o.createdAt.getDate(); // 1..31
+      incomeMap[day] = (incomeMap[day] || 0) + o.totalPrice;
+    });
 
-    for (let i = 0; i <= totalDays; i++) {
-      const d = new Date(fromDate);
-      d.setDate(fromDate.getDate() + i);
-
-      const dayNum = d.getDate();
-
-      const key = d.toISOString().split("T")[0];
-
-      const total = orders
-        .filter((o) => o.createdAt.toISOString().split("T")[0] === key)
-        .reduce((sum, o) => sum + o.totalPrice, 0);
-
-      dailyIncome.push({ date: dayNum, income: total });
-    }
+    const daysInMonth = endOfMonth.getDate();
+    const dailyIncome = Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      income: incomeMap[i + 1] || 0,
+    }));
 
     await redis.set(cacheKey, JSON.stringify(dailyIncome), { ex: 300 });
     return res.json(dailyIncome);
   } catch (error) {
-    console.log("Error in getting the daily income per day", error);
-    return res.status(500).json({ msg: "Failed to fetch daily income" });
+    console.log("Error in getting monthly income", error);
+    return res.status(500).json({ msg: "Failed to fetch monthly income" });
   }
 };
 
