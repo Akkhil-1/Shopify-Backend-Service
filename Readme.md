@@ -39,7 +39,7 @@ npm start
 
 ## Visuals
 ### System Workflow Diagram
-<img src="./assets/workflow.jpg" alt="System Workflow Diagram" width="600"/>
+<img src="./assests/workflow.png" alt="System Workflow Diagram" width="600"/>
 
 ---
 ### Architecture Diagram
