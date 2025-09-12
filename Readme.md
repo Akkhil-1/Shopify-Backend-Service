@@ -21,8 +21,7 @@ https://shopify-backend-serviccee.onrender.com
 
 Clone the repository:
 ```bash
-git clone https://github.com/your-username/shopify-frontend.git
-cd shopify-frontend
+git clone https://github.com/Akkhil-1/Shopify-Backend-Service
 ```
 
 Install Dependencies:
