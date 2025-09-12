@@ -16,7 +16,7 @@ const getOverview = async (req, res) => {
       try {
         return res.json(JSON.parse(cached));
       } catch (e) {
-        console.warn("Corrupt cache, clearing...");
+        console.log("clearing cache");
         await redis.del(cacheKey);
       }
     }
@@ -41,8 +41,8 @@ const getOverview = async (req, res) => {
     await redis.set(cacheKey, JSON.stringify(data), { ex: 300 });
 
     return res.json(data);
-  } catch (err) {
-    console.error("Error in getOverview:", err);
+  } catch (error) {
+    console.error("Error in getOverview:", error);
     return res.status(500).json({ msg: "Failed to fetch overview" });
   }
 };
@@ -60,7 +60,7 @@ const getTopCustomers = async (req, res) => {
       try {
         return res.json(JSON.parse(cached));
       } catch (e) {
-        console.warn("Corrupt cache, clearing...");
+        console.log("clearing cache");
         await redis.del(cacheKey);
       }
     }
@@ -95,8 +95,8 @@ const getTopCustomers = async (req, res) => {
     await redis.set(cacheKey, JSON.stringify(customers), { ex: 300 });
 
     return res.json(customers);
-  } catch (err) {
-    console.error("Error in getTopCustomers:", err.message);
+  } catch (error) {
+    console.error("Error in getTopCustomers:", error.message);
     return res.status(500).json({ msg: "Failed to fetch top customers" });
   }
 };
@@ -105,11 +105,13 @@ const getRecentOrders = async (req, res) => {
     const adminId = req.userId;
     const tenant = await prisma.tenant.findFirst({ where: { adminId } });
     if (!tenant) return res.status(404).json({ msg: "No tenant found" });
+    const cacheKey = `tenant:${tenant.id}:getRecentOrders`;
+    const cached = await redis.get(cacheKey);
     if (cached) {
       try {
         return res.json(JSON.parse(cached));
       } catch (e) {
-        console.warn("Corrupt cache, clearing...");
+        console.log("clearing cache");
         await redis.del(cacheKey);
       }
     }
@@ -138,7 +140,9 @@ const getRecentOrders = async (req, res) => {
     res.json(
       orders.map((o) => ({
         customer:
-          `${o.customer?.firstName || ""} ${o.customer?.lastName || ""}`.trim() ||
+          `${o.customer?.firstName || ""} ${
+            o.customer?.lastName || ""
+          }`.trim() ||
           o.customer?.email ||
           "Unknown",
         amount: o.totalPrice,
@@ -146,22 +150,24 @@ const getRecentOrders = async (req, res) => {
         date: o.createdAt,
       }))
     );
-  } catch (err) {
-    console.error("Error in getRecentOrders:", err);
+  } catch (error) {
+    console.error("Error in getRecentOrders:", error);
     return res.status(500).json({ msg: "Failed to fetch recent orders" });
   }
 };
 
-const financialStatus = async(req,res)=>{
+const financialStatus = async (req, res) => {
   try {
     const adminId = req.userId;
     const tenant = await prisma.tenant.findFirst({ where: { adminId } });
     if (!tenant) return res.status(404).json({ msg: "No tenant found" });
+    const cacheKey = `tenant:${tenant.id}:financialStatus`;
+    const cached = await redis.get(cacheKey);
     if (cached) {
       try {
         return res.json(JSON.parse(cached));
       } catch (e) {
-        console.warn("Corrupt cache, clearing...");
+        console.log("clearing cache");
         await redis.del(cacheKey);
       }
     }
@@ -178,15 +184,115 @@ const financialStatus = async(req,res)=>{
     await redis.set(cacheKey, JSON.stringify(result), { ex: 300 });
 
     res.json(result);
-
   } catch (error) {
-    console.error("Error in getting financialStatus:", err);
+    console.error("Error in getting financialStatus:", error);
     return res.status(500).json({ msg: "Failed to fetch financialStatus" });
   }
-}
+};
+const getDailyIncome = async (req, res) => {
+  try {
+    const adminId = req.userId;
+    const tenant = await prisma.tenant.findFirst({ where: { adminId } });
+    if (!tenant) {
+      return res.status(404).json({ msg: "No tenant found" });
+    }
+    const cacheKey = `tenant:${tenant.id}:dailyincome`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        return res.json(JSON.parse(cached));
+      } catch (error) {
+        console.log("clearing cache");
+        await redis.del(cacheKey);
+      }
+    }
+    const today = new Date();
+    const fromDate = new Date();
+    fromDate.setDate(today.getDate() - 8);
+    const orders = await prisma.order.findMany({
+      where: {
+        tenantId: tenant.id,
+        createdAt: {
+          gte: fromDate,
+          lte: today,
+        },
+      },
+      select: { totalPrice: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    });
+    const dailyIncome = [];
+    for (let i = 0; i < 10; i++) {
+      const d = new Date(fromDate);
+      d.setDate(fromDate.getDate() + i);
+      const key = d.toISOString().split("T")[0];
+
+      const total = orders
+        .filter((o) => o.createdAt.toISOString().split("T")[0] === key)
+        .reduce((sum, o) => sum + o.totalPrice, 0);
+
+      dailyIncome.push({ date: key, income: total });
+    }
+    await redis.set(cacheKey, JSON.stringify(dailyIncome), { ex: 300 });
+    return res.json(dailyIncome);
+  } catch (error) {
+    console.log("Error in getting the daily income per day" + error);
+    return res.json(500).json({ msg: "Failed to fetch daily income" });
+  }
+};
+const monthlySale = async (req, res) => {
+  try {
+    const adminId = req.userId;
+    const tenant = await prisma.tenant.findFirst({ where: { adminId } });
+    if (!tenant) {
+      return res.status(404).json({ msg: "No tenant found" });
+    }
+
+    const cacheKey = `tenant:${tenant.id}:monthlySale`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      try {
+        return res.json(JSON.parse(cached));
+      } catch {
+        await redis.del(cacheKey);
+      }
+    }
+    const orders = await prisma.order.findMany({
+      where: { tenantId: tenant.id },
+      select: { totalPrice: true, createdAt: true },
+    });
+
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const monthlyData = months.map((m) => ({ month: m, sales: 0 }));
+
+    for (let i = 0; i < orders.length; i++) {
+      const monthIndex = new Date(orders[i].createdAt).getMonth();
+      monthlyData[monthIndex].sales += orders[i].totalPrice;
+    }
+    await redis.set(cacheKey, JSON.stringify(monthlyData), { ex: 300 });
+    return res.json(monthlyData);
+  } catch (error) {
+    console.error("Error in monthlySale:", error.message);
+    return res.status(500).json({ msg: "Failed to fetch monthly sales" });
+  }
+};
 module.exports = {
   getOverview,
   getTopCustomers,
   getRecentOrders,
-  financialStatus
+  financialStatus,
+  getDailyIncome,
+  monthlySale,
 };
