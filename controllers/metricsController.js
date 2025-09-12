@@ -35,7 +35,7 @@ const getOverview = async (req, res) => {
     const data = {
       customers: totalCustomers,
       orders: totalOrders,
-      revenue: totalRevenue._sum.totalPrice || 0,
+      revenue: Math.round(totalRevenue._sum.totalPrice || 0),
     };
 
     await redis.set(cacheKey, JSON.stringify(data), { ex: 300 });
@@ -196,6 +196,7 @@ const getDailyIncome = async (req, res) => {
     if (!tenant) {
       return res.status(404).json({ msg: "No tenant found" });
     }
+
     const cacheKey = `tenant:${tenant.id}:dailyincome`;
     const cached = await redis.get(cacheKey);
     if (cached) {
@@ -206,9 +207,13 @@ const getDailyIncome = async (req, res) => {
         await redis.del(cacheKey);
       }
     }
+
     const today = new Date();
     const fromDate = new Date();
-    fromDate.setDate(today.getDate() - 8);
+    fromDate.setDate(today.getDate() - 5);
+    const toDate = new Date();
+    toDate.setDate(today.getDate() + 10);
+
     const orders = await prisma.order.findMany({
       where: {
         tenantId: tenant.id,
@@ -220,25 +225,35 @@ const getDailyIncome = async (req, res) => {
       select: { totalPrice: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     });
+
     const dailyIncome = [];
-    for (let i = 0; i < 10; i++) {
+    const totalDays = Math.ceil(
+      (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    for (let i = 0; i <= totalDays; i++) {
       const d = new Date(fromDate);
       d.setDate(fromDate.getDate() + i);
+
+      const dayNum = d.getDate();
+
       const key = d.toISOString().split("T")[0];
 
       const total = orders
         .filter((o) => o.createdAt.toISOString().split("T")[0] === key)
         .reduce((sum, o) => sum + o.totalPrice, 0);
 
-      dailyIncome.push({ date: key, income: total });
+      dailyIncome.push({ date: dayNum, income: total });
     }
+
     await redis.set(cacheKey, JSON.stringify(dailyIncome), { ex: 300 });
     return res.json(dailyIncome);
   } catch (error) {
-    console.log("Error in getting the daily income per day" + error);
-    return res.json(500).json({ msg: "Failed to fetch daily income" });
+    console.log("Error in getting the daily income per day", error);
+    return res.status(500).json({ msg: "Failed to fetch daily income" });
   }
 };
+
 const monthlySale = async (req, res) => {
   try {
     const adminId = req.userId;
