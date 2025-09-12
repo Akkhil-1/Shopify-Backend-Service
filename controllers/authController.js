@@ -48,7 +48,7 @@ const login = async (req, res) => {
       return res.status(401).json({ msg: "Incorrect credentials" });
     }
 
-    const tenant = await prisma.tenant.findFirst({ where: { adminId: user.id } });
+    const tenant = await prisma.tenant.findFirst({ where: { adminId: admin.id } });
 
     const token = jwt.sign({ userId: admin.id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
@@ -119,9 +119,24 @@ const connectStore = async (req, res) => {
     return res.status(500).json({ msg: "Failed to connect Shopify store" });
   }
 };
+const logout = async (req, res) => {
+  try {
+    res.clearCookie("auth_token", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+    });
 
+    return res.json({ msg: "Logged out successfully" });
+  } catch (err) {
+    console.error("Error during logout:", err.message);
+    return res.status(500).json({ msg: "Failed to logout" });
+  }
+};
 module.exports = {
   register,
   login,
   connectStore,
+  logout
 };
