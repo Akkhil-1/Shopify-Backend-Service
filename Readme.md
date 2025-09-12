@@ -1,6 +1,6 @@
 # Shopify Data Ingestion Service
 
-## Deployed backend Base Url 
+## Deployed URL
 https://shopify-backend-serviccee.onrender.com
 
 ---
@@ -32,7 +32,13 @@ npm install
 
 Run Command :
 ```bash
-npm run dev
+npm start
 ```
+
+---
+
+## Visuals
+### System Workflow Diagram
+<img src='./assests/workflow.jpg'>
 
 
