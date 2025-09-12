@@ -40,9 +40,14 @@ npm start
 ## Visuals
 ### System Workflow Diagram
 <img src="./assets/workflow.jpg" alt="System Workflow Diagram" width="600"/>
+
 ---
 ### Architecture Diagram
 <img src="./assests/cronjob.png" alt="Cron Job" width="600"/>
+
+---
+### Redis CLI (Caching)
+<img src="./assests/redis_cli.png" alt="caching" width="600"/>
 
 
 
