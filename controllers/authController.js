@@ -48,6 +48,8 @@ const login = async (req, res) => {
       return res.status(401).json({ msg: "Incorrect credentials" });
     }
 
+    const tenant = await prisma.tenant.findFirst({ where: { adminId: user.id } });
+
     const token = jwt.sign({ userId: admin.id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
@@ -67,6 +69,7 @@ const login = async (req, res) => {
         name: admin.name,
         email: admin.email,
       },
+      hasTenant: tenant ? true : false,
       tenants: admin.tenants,
     });
   } catch (err) {
