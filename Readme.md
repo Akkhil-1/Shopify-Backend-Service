@@ -70,7 +70,15 @@ Monthly_Sale     https://shopify-backend-serviccee.onrender.com/metrics/monthlyS
 ---
 
 ## DB DESIGN
-<img src="./assests/DB_schema.png" alt="DB" width="500"/>
+<img src="./assests/DB_schema.png" alt="DB" width="600"/>
+
+---
+
+## Known Limitations / Assumptions
+
+- **Free-tier Hosting Constraints**: The backend is deployed on Render’s free tier, which may auto-sleep after periods of inactivity. This can introduce delays (cold starts) unless keep-alive pings or external uptime monitors are used.  
+- **Webhook Reliability**: The system currently assumes Shopify reliably delivers webhooks. Error handling, retries, and duplicate event detection are minimal, so missed or repeated events may affect data consistency.  
+- **Single Store per Admin**: The current implementation assumes one admin is linked to a single Shopify store. Multi-store management is not yet supported. 
 
 ## Visuals
 ### System Workflow Diagram
