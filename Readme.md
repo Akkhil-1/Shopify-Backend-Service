@@ -39,32 +39,32 @@ npm start
 ## API ENDPOINTS
 Authentication Endpoints [ POST Request ]
 ```bash
-Register        -> https://shopify-backend-serviccee.onrender.com/admin/register
-Login           -> https://shopify-backend-serviccee.onrender.com/admin/login
-ConnectStore    -> https://shopify-backend-serviccee.onrender.com/admin/register/tenants
-Logout          -> https://shopify-backend-serviccee.onrender.com/admin/logout
+Register         https://shopify-backend-serviccee.onrender.com/admin/register
+Login            https://shopify-backend-serviccee.onrender.com/admin/login
+ConnectStore     https://shopify-backend-serviccee.onrender.com/admin/register/tenants
+Logout           https://shopify-backend-serviccee.onrender.com/admin/logout
 ```
 
 Webhook Ingestion Endpoints [ POST Request ]
 ```bash
-CreateOrder  -> https://shopify-backend-serviccee.onrender.com/webhooks/orders/create 
-UpdateOrder  -> https://shopify-backend-serviccee.onrender.com/webhooks/orders/updated
+CreateOrder      https://shopify-backend-serviccee.onrender.com/webhooks/orders/create 
+UpdateOrder      https://shopify-backend-serviccee.onrender.com/webhooks/orders/updated
 
-CreateCustomer  -> https://shopify-backend-serviccee.onrender.com/webhooks/customers/create
-UpdateCustomer  -> https://shopify-backend-serviccee.onrender.com/webhooks/customers/updated
+CreateCustomer   https://shopify-backend-serviccee.onrender.com/webhooks/customers/create
+UpdateCustomer   https://shopify-backend-serviccee.onrender.com/webhooks/customers/updated
 
-CreateProducts  -> https://shopify-backend-serviccee.onrender.com/webhooks/products/create
-UpdateProducts  -> https://shopify-backend-serviccee.onrender.com/webhooks/products/updated
+CreateProducts   https://shopify-backend-serviccee.onrender.com/webhooks/products/create
+UpdateProducts   https://shopify-backend-serviccee.onrender.com/webhooks/products/updated
 ```
 
 Metrics & Data Analysis Endpoints [ GET Request ]
 ```bash
-OverView         -> https://shopify-backend-serviccee.onrender.com/metrics/getOverview
-Recent_Orders    -> https://shopify-backend-serviccee.onrender.com/metrics/getRecentOrders
-Top_Customers    -> https://shopify-backend-serviccee.onrender.com/metrics/getTopCustomers
-Financial_Staus  -> https://shopify-backend-serviccee.onrender.com/metrics/getFinancialStaus
-Daily_Income     -> https://shopify-backend-serviccee.onrender.com/metrics/getDailyIncome
-Monthly_Sale     -> https://shopify-backend-serviccee.onrender.com/metrics/monthlySale
+OverView         https://shopify-backend-serviccee.onrender.com/metrics/getOverview
+Recent_Orders    https://shopify-backend-serviccee.onrender.com/metrics/getRecentOrders
+Top_Customers    https://shopify-backend-serviccee.onrender.com/metrics/getTopCustomers
+Financial_Staus  https://shopify-backend-serviccee.onrender.com/metrics/getFinancialStaus
+Daily_Income     https://shopify-backend-serviccee.onrender.com/metrics/getDailyIncome
+Monthly_Sale     https://shopify-backend-serviccee.onrender.com/metrics/monthlySale
 ```
 ---
 
