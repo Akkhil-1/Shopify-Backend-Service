@@ -66,7 +66,11 @@ Financial_Staus  https://shopify-backend-serviccee.onrender.com/metrics/getFinan
 Daily_Income     https://shopify-backend-serviccee.onrender.com/metrics/getDailyIncome
 Monthly_Sale     https://shopify-backend-serviccee.onrender.com/metrics/monthlySale
 ```
+
 ---
+
+## DB DESIGN
+<img src="./assests/DB_schema.png" alt="DB" width="500"/>
 
 ## Visuals
 ### System Workflow Diagram
